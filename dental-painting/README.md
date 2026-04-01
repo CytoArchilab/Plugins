@@ -6,16 +6,33 @@ A browser-based 3D dental mesh annotation editor built on Three.js. Import denta
 
 No build tools, no framework — pure vanilla HTML/CSS/JS with Three.js r170 via CDN.
 
-## Quick Start
+## Download
 
 ```bash
-cd editor
+git clone --depth 1 --filter=blob:none --sparse https://github.com/CytoArchilab/Plugins.git
+cd Plugins
+git sparse-checkout set dental-painting
+```
+
+## Quick Start
+
+> **Important**: Do NOT open `index.html` by double-clicking — the browser will block ES Module imports under the `file://` protocol. You must run a local HTTP server.
+
+**Option A — Python (pre-installed on Mac/Linux)**:
+
+```bash
+cd dental-painting
 python3 -m http.server 8080
-# or
+```
+
+**Option B — Node.js**:
+
+```bash
+cd dental-painting
 npx serve .
 ```
 
-Open http://localhost:8080/, drag-drop a dental mesh file, and start annotating.
+Then open http://localhost:8080/ in your browser, drag-drop a dental mesh file (PLY/STL/OBJ), and start annotating.
 
 ## Features
 
