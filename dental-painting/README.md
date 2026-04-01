@@ -99,6 +99,10 @@ editor/
 
 No other external dependencies.
 
+## Contact
+
+[CytoArchiLab](https://cytoarchilab.org) — For questions or issues, please contact yuhuili@hku.hk
+
 ## License
 
 Copyright (c) CytoArchiLab. All rights reserved.
