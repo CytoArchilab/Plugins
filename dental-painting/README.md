@@ -18,6 +18,14 @@ git sparse-checkout set dental-painting
 
 > **Important**: Do NOT open `index.html` by double-clicking — the browser will block ES Module imports under the `file://` protocol. You must run a local HTTP server.
 
+### Step 1: Open Terminal
+
+- **Mac** — Press `Cmd + Space`, type `Terminal`, press Enter
+- **Windows** — Press `Win + R`, type `cmd`, press Enter (requires [Git](https://git-scm.com/) and [Python](https://www.python.org/) installed)
+- **Linux** — Press `Ctrl + Alt + T`
+
+### Step 2: Navigate to the plugin folder and start the server
+
 **Option A — Python (pre-installed on Mac/Linux)**:
 
 ```bash
