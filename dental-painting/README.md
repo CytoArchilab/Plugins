@@ -1,7 +1,5 @@
 # Three.js Dental Annotation Plugin
 
-Copyright (c) CytoArchiLab. All rights reserved.
-
 A browser-based 3D dental mesh annotation editor built on Three.js. Import dental models (PLY/STL/OBJ), label vertices by FDI tooth number using brush/eraser/flood-fill tools, and export colored PLY + JSON metadata.
 
 Built with vanilla HTML/CSS/JS and Three.js r170 via CDN.
