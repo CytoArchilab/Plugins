@@ -42,6 +42,12 @@ npx serve .
 
 Then open http://localhost:8080/ in your browser, drag-drop a dental mesh file (PLY/STL/OBJ), and start annotating.
 
+> **If you see `OSError: Address already in use`**, port 8080 is occupied. Use a different port:
+> ```bash
+> python3 -m http.server 8888
+> ```
+> Then open http://localhost:8888/ instead.
+
 ## Features
 
 - **FDI Tooth Labeling** — 32 teeth + gingiva/anatomy/pathology labels with auto-generated distinct colors
