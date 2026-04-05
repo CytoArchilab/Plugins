@@ -353,8 +353,117 @@ class Editor {
         return this.canvas.toDataURL('image/png');
     }
 
+    /**
+     * Capture screenshot of viewport including annotation overlays.
+     */
     downloadScreenshot(filename = 'dental_screenshot.png') {
-        const dataUrl = this.screenshot();
+        // Force a fresh render right now
+        this.renderer.clear();
+        this.renderer.render(this.scene, this.camera);
+
+        const cw = this.canvas.width;
+        const ch = this.canvas.height;
+        const vpW = this.viewportElement.clientWidth;
+        const vpH = this.viewportElement.clientHeight;
+
+        const offscreen = document.createElement('canvas');
+        offscreen.width = cw;
+        offscreen.height = ch;
+        const ctx = offscreen.getContext('2d');
+
+        // 1. Draw WebGL canvas (use actual canvas pixel size)
+        ctx.drawImage(this.canvas, 0, 0);
+
+        // 2. Scale factor from viewport CSS pixels to canvas pixels
+        const rx = cw / vpW;
+        const ry = ch / vpH;
+
+        // 3. Draw annotations using Canvas 2D
+        if (this._annotationManager) {
+            const camera = this.camera;
+            const annotations = this._annotationManager.getAll();
+
+            for (const ann of annotations) {
+                if (ann.hidden) continue;
+
+                const projected = ann.worldPos.clone().project(camera);
+                if (projected.z > 1) continue;
+
+                // Screen position in CSS pixels
+                const sx = (projected.x * 0.5 + 0.5) * vpW;
+                const sy = (-projected.y * 0.5 + 0.5) * vpH;
+
+                // Convert to canvas pixels
+                const cx = sx * rx;
+                const cy = sy * ry;
+
+                // Distance-based scale
+                const dist = camera.position.distanceTo(ann.worldPos);
+                const refDist = this._sceneSize || 100;
+                const s = Math.max(0.4, Math.min(1.2, refDist / (dist + refDist * 0.5)));
+                const ps = s * rx; // pixel scale
+
+                const color = ann.color || '#e94560';
+
+                // Marker dot
+                ctx.save();
+                ctx.beginPath();
+                ctx.arc(cx, cy, 12 * ps, 0, Math.PI * 2);
+                ctx.fillStyle = color;
+                ctx.fill();
+                ctx.strokeStyle = '#fff';
+                ctx.lineWidth = 2 * ps;
+                ctx.stroke();
+                ctx.restore();
+
+                // Text label
+                const text = ann.text;
+                if (!text) continue;
+
+                const fontSize = Math.round(12 * ps);
+                ctx.font = `bold ${fontSize}px -apple-system, BlinkMacSystemFont, sans-serif`;
+                const tw = ctx.measureText(text).width;
+                const pad = 6 * ps;
+                const dotR = 4 * ps;
+                const lw = dotR * 2 + 6 * ps + tw + pad * 2;
+                const lh = fontSize + pad * 2;
+                const lx = cx + 20 * ps;
+                const ly = cy - 20 * ps - lh;
+
+                // Background rect (manual rounded rect for compatibility)
+                const r = 6 * ps;
+                ctx.beginPath();
+                ctx.moveTo(lx + r, ly);
+                ctx.lineTo(lx + lw - r, ly);
+                ctx.quadraticCurveTo(lx + lw, ly, lx + lw, ly + r);
+                ctx.lineTo(lx + lw, ly + lh - r);
+                ctx.quadraticCurveTo(lx + lw, ly + lh, lx + lw - r, ly + lh);
+                ctx.lineTo(lx + r, ly + lh);
+                ctx.quadraticCurveTo(lx, ly + lh, lx, ly + lh - r);
+                ctx.lineTo(lx, ly + r);
+                ctx.quadraticCurveTo(lx, ly, lx + r, ly);
+                ctx.closePath();
+                ctx.fillStyle = 'rgba(15, 15, 25, 0.92)';
+                ctx.fill();
+                ctx.strokeStyle = color;
+                ctx.lineWidth = 2 * ps;
+                ctx.stroke();
+
+                // Color dot in label
+                ctx.beginPath();
+                ctx.arc(lx + pad + dotR, ly + lh / 2, dotR, 0, Math.PI * 2);
+                ctx.fillStyle = color;
+                ctx.fill();
+
+                // Text
+                ctx.fillStyle = '#fff';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(text, lx + pad + dotR * 2 + 6 * ps, ly + lh / 2);
+            }
+        }
+
+        // Download
+        const dataUrl = offscreen.toDataURL('image/png');
         const a = document.createElement('a');
         a.href = dataUrl;
         a.download = filename;

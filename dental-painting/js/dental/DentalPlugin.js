@@ -10,6 +10,9 @@ import { VertexLabelManager } from './VertexLabelManager.js';
 import { BrushTool } from './BrushTool.js';
 import { EraserTool } from './EraserTool.js';
 import { FloodFillTool } from './FloodFillTool.js';
+import { TextTool } from './TextTool.js';
+import { TextAnnotationManager } from './TextAnnotationManager.js';
+import { RemoveAnnotationCommand, EditAnnotationCommand } from './TextCommands.js';
 import { SidebarDental } from './SidebarDental.js';
 import * as THREE from 'three';
 
@@ -34,6 +37,10 @@ class DentalPlugin {
         // Create vertex label manager
         this.vlm = new VertexLabelManager();
 
+        // Create text annotation manager
+        this.annManager = new TextAnnotationManager(editor);
+        editor._annotationManager = this.annManager;
+
         // Current state
         this.currentLabel = 1;
         this.activeMesh = null;
@@ -43,11 +50,13 @@ class DentalPlugin {
         this.brushTool = new BrushTool(editor, this.vlm, this.schema);
         this.eraserTool = new EraserTool(editor, this.vlm, this.schema);
         this.fillTool = new FloodFillTool(editor, this.vlm, this.schema);
+        this.textTool = new TextTool(editor, this.annManager);
 
         this._tools = {
             brush: this.brushTool,
             eraser: this.eraserTool,
-            fill: this.fillTool
+            fill: this.fillTool,
+            text: this.textTool
         };
 
         // Create sidebar panel
@@ -84,6 +93,24 @@ class DentalPlugin {
         if (!signals.brushRadiusChanged) {
             signals.brushRadiusChanged = new signals._Signal();
         }
+        if (!signals.annotationRemoveRequested) {
+            signals.annotationRemoveRequested = new signals._Signal();
+        }
+        if (!signals.annotationEditRequested) {
+            signals.annotationEditRequested = new signals._Signal();
+        }
+        if (!signals.annotationSelected) {
+            signals.annotationSelected = new signals._Signal();
+        }
+        if (!signals.textHitPending) {
+            signals.textHitPending = new signals._Signal();
+        }
+        if (!signals.textEditPending) {
+            signals.textEditPending = new signals._Signal();
+        }
+        if (!signals.annotationChanged) {
+            signals.annotationChanged = new signals._Signal();
+        }
     }
 
     _hookSignals() {
@@ -117,6 +144,24 @@ class DentalPlugin {
                 if (foundMesh) {
                     this._setActiveMesh(foundMesh);
                 }
+            }
+        });
+
+        // Annotation remove/edit requests from TextAnnotationManager
+        signals.annotationRemoveRequested.add((annId) => {
+            const cmd = new RemoveAnnotationCommand(this.editor, this.annManager, annId);
+            cmd.execute();
+            this.editor.history.push(cmd);
+            signals.annotationChanged.dispatch();
+        });
+
+        signals.annotationEditRequested.add((annId) => {
+            const ann = this.annManager.get(annId);
+            if (!ann) return;
+            this.annManager.select(annId);
+            // Signal sidebar to enter edit mode with current text
+            if (signals.textEditPending) {
+                signals.textEditPending.dispatch(annId, ann.text);
             }
         });
 
@@ -172,6 +217,7 @@ class DentalPlugin {
         this.brushTool.setActiveMesh(mesh);
         this.eraserTool.setActiveMesh(mesh);
         this.fillTool.setActiveMesh(mesh);
+        this.textTool.setActiveMesh(mesh);
     }
 
     _registerSidebar() {
@@ -219,6 +265,7 @@ class DentalPlugin {
         this.brushTool.deactivate();
         this.eraserTool.deactivate();
         this.fillTool.deactivate();
+        this.textTool.deactivate();
     }
 
     _setupShortcuts() {
@@ -234,6 +281,9 @@ class DentalPlugin {
                     break;
                 case 'F':
                     this.sidebar._selectTool('fill');
+                    break;
+                case 'T':
+                    this.sidebar._selectTool('text');
                     break;
                 case '[':
                     this.setBrushRadius(Math.max(0.1, this.brushTool.brushRadius - 0.5));

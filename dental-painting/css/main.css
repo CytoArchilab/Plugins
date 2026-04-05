@@ -538,3 +538,230 @@ body {
     font-size: 12px;
     color: #ccc;
 }
+
+/* --- Text Annotation Settings --- */
+
+.ann-color-grid {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    padding: 4px 0;
+}
+
+.ann-color-btn {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    border: 2px solid transparent;
+    cursor: pointer;
+    transition: border-color 0.15s;
+}
+
+.ann-color-btn:hover {
+    border-color: #888;
+}
+
+.ann-color-btn.active {
+    border-color: #fff;
+    box-shadow: 0 0 6px rgba(255,255,255,0.4);
+}
+
+.ann-marker-grid {
+    display: flex;
+    gap: 4px;
+    flex-wrap: wrap;
+    padding: 4px 0;
+}
+
+.ann-marker-btn {
+    width: 32px;
+    height: 32px;
+    background: #333;
+    border: 2px solid transparent;
+    border-radius: 6px;
+    cursor: pointer;
+    color: #aaa;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s;
+}
+
+.ann-marker-btn:hover {
+    background: #444;
+    color: #fff;
+}
+
+.ann-marker-btn.active {
+    border-color: #e94560;
+    background: #3a1a2a;
+    color: #e94560;
+}
+
+/* --- Text Annotations (viewport) --- */
+
+.ann-label {
+    position: absolute;
+    background: rgba(15, 15, 25, 0.92);
+    border: 2px solid #e94560;
+    border-radius: 8px;
+    padding: 5px 10px;
+    font-size: 12px;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    white-space: nowrap;
+    cursor: default;
+    user-select: none;
+    box-shadow: 0 3px 12px rgba(0,0,0,0.6);
+    backdrop-filter: blur(4px);
+}
+
+.ann-color-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.ann-text {
+    cursor: text;
+    max-width: 200px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+
+.ann-selected {
+    outline: 2px solid #fff;
+    outline-offset: 2px;
+    box-shadow: 0 0 12px rgba(255,255,255,0.3), 0 3px 12px rgba(0,0,0,0.6);
+}
+
+.ann-text-input {
+    width: 100%;
+    padding: 8px 10px;
+    background: #1a1a2e;
+    border: 1px solid #444;
+    border-radius: 6px;
+    color: #fff;
+    font-size: 13px;
+    outline: none;
+    margin-top: 4px;
+}
+
+.ann-text-input:focus {
+    border-color: #e94560;
+    box-shadow: 0 0 6px rgba(233, 69, 96, 0.3);
+}
+
+.ann-btn-row {
+    display: flex;
+    gap: 6px;
+    margin-top: 6px;
+}
+
+.ann-confirm-btn {
+    flex: 1;
+    padding: 6px 0;
+    font-size: 12px;
+}
+
+.ann-confirm-btn.active {
+    background: #2563eb;
+    color: #fff;
+    border-color: #2563eb;
+}
+
+/* --- Annotation List --- */
+
+.ann-list-scroll {
+    max-height: 200px;
+    overflow-y: auto;
+    margin-top: 6px;
+}
+
+.ann-list-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    color: #ccc;
+}
+
+.ann-list-item:hover {
+    background: #333;
+}
+
+.ann-list-item.selected {
+    background: #2a1a2e;
+    outline: 1px solid #e94560;
+}
+
+.ann-list-item.hidden {
+    opacity: 0.4;
+}
+
+.ann-list-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.ann-list-text {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.ann-list-btn {
+    background: none;
+    border: none;
+    color: #666;
+    cursor: pointer;
+    font-size: 14px;
+    padding: 0 3px;
+    line-height: 1;
+}
+
+.ann-list-btn:hover {
+    color: #4ecdc4;
+}
+
+.ann-list-del:hover {
+    color: #e94560;
+}
+
+.ann-delete-all {
+    background: #3a1a1a;
+    color: #e94560;
+    border: 1px solid #e94560;
+}
+
+.ann-delete-all:hover {
+    background: #e94560;
+    color: #fff;
+}
+
+.ann-list-empty {
+    font-size: 11px;
+    color: #666;
+    padding: 8px;
+    text-align: center;
+}
+
+.ann-selection-info {
+    margin-top: 8px;
+    padding: 6px 8px;
+    font-size: 11px;
+    color: #888;
+    background: #222;
+    border-radius: 4px;
+    border-left: 3px solid #e94560;
+}

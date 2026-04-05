@@ -52,10 +52,13 @@ Then open http://localhost:8080/ in your browser, drag-drop a dental mesh file (
 - **Brush Tool** — Radius-based vertex painting with drag interpolation
 - **Eraser Tool** — Remove labels from vertices
 - **Flood Fill Tool** — BFS adjacency-based region filling
+- **Text Annotation Tool** — 3D anchor text annotations with 8 marker icons, 8 color presets, distance-based scaling
+- **Color Mode** — Toggle between original mesh colors and label colors
 - **Undo/Redo** — Full command-pattern history (Cmd/Ctrl+Z / Cmd/Ctrl+Shift+Z)
-- **Export** — Binary PLY with vertex colors + JSON sidecar with label statistics
+- **Export** — Binary PLY with vertex colors + JSON sidecar with label statistics and annotations
 - **Camera Presets** — 7 dental view angles (front/back/left/right/top/bottom/occlusal)
 - **Lighting Controls** — Camera headlight, ambient intensity, toggle
+- **Screenshot** — PNG export with annotation overlays
 
 ## Controls
 
@@ -66,7 +69,7 @@ Then open http://localhost:8080/ in your browser, drag-drop a dental mesh file (
 | Middle-click drag | Pan |
 | Scroll wheel | Adjust brush radius |
 | Cmd/Ctrl + scroll | Zoom |
-| B / E / F | Switch Brush / Eraser / Fill tool |
+| B / E / F / T | Switch Brush / Eraser / Fill / Text tool |
 | \[ / \] | Decrease / increase brush radius |
 | Numpad 1-7 | Camera presets |
 
@@ -88,19 +91,27 @@ editor/
 │       ├── EraserTool.js          ← Erase labels
 │       ├── FloodFillTool.js       ← BFS flood fill
 │       ├── SidebarDental.js       ← UI panel
-│       └── DentalExporter.js      ← PLY + JSON export
+│       ├── TextTool.js             ← 3D anchor text annotation tool
+│       ├── TextAnnotationManager.js ← Annotation rendering + management
+│       ├── TextCommands.js          ← Annotation undo/redo commands
+│       └── DentalExporter.js        ← PLY + JSON export
 ```
 
 ## Dependencies
 
-- [Three.js r170](https://threejs.org/) (loaded via CDN, MIT License)
+- [Three.js r170](https://threejs.org/) (CDN, MIT License)
+- [html2canvas 1.4.1](https://html2canvas.hertzen.com/) (CDN, MIT License)
 
-No other external dependencies.
+No npm install required — all dependencies loaded via CDN.
+
+## Credits
+
+Developed by [CytoArchiLab](https://cytoarchilab.org), The University of Hong Kong.
 
 ## Contact
 
-[CytoArchiLab](https://cytoarchilab.org) — For questions or issues, please contact yuhuili@hku.hk
+For questions or issues, please contact yuhuili@hku.hk
 
 ## License
 
-Copyright (c) CytoArchiLab. All rights reserved.
+MIT License — see [LICENSE](LICENSE) for details.

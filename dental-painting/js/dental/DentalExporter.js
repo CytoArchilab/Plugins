@@ -9,9 +9,10 @@ class DentalExporter {
      * @param {object} vertexLabelManager
      * @param {object} labelSchema
      */
-    constructor(vertexLabelManager, labelSchema) {
+    constructor(vertexLabelManager, labelSchema, annotationManager) {
         this.vlm = vertexLabelManager;
         this.schema = labelSchema;
+        this.annManager = annotationManager || null;
     }
 
     /**
@@ -181,7 +182,8 @@ class DentalExporter {
             n_vertices: geometry.attributes.position.count,
             n_faces: geometry.index ? geometry.index.count / 3 : geometry.attributes.position.count / 3,
             schema: this.schema.toJSON(),
-            label_stats: stats
+            label_stats: stats,
+            annotations: this.annManager ? this.annManager.toJSON() : []
         };
 
         const json = JSON.stringify(sidecar, null, 2);

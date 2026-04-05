@@ -5,6 +5,8 @@
  */
 
 import { DentalExporter } from './DentalExporter.js';
+import { ANNOTATION_COLORS, MARKER_ICONS } from './TextAnnotationManager.js';
+import { EditAnnotationCommand } from './TextCommands.js';
 
 class SidebarDental {
     constructor(editor, plugin) {
@@ -21,7 +23,10 @@ class SidebarDental {
 
     _build() {
         this._addSection('Tools', this._buildToolButtons());
+        this._addSection('Color Mode', this._buildColorModeToggle());
         this._addSection('Brush Settings', this._buildBrushSettings());
+        this._addSection('Text Settings', this._buildTextSettings());
+        this._addSection('Annotations', this._buildAnnotationList());
         this._addSection('Current Label', this._buildCurrentLabel());
         this._addSection('FDI Quick Select', this._buildFDIGrid());
         this._addSection('Labels', this._buildLabelList());
@@ -55,7 +60,8 @@ class SidebarDental {
         const tools = [
             { id: 'brush', label: 'Brush', shortcut: 'B' },
             { id: 'eraser', label: 'Eraser', shortcut: 'E' },
-            { id: 'fill', label: 'Fill', shortcut: 'F' }
+            { id: 'fill', label: 'Fill', shortcut: 'F' },
+            { id: 'text', label: 'Text', shortcut: 'T' }
         ];
 
         this._toolButtons = {};
@@ -74,7 +80,7 @@ class SidebarDental {
         // Usage hint
         const hint = document.createElement('div');
         hint.className = 'dental-hint';
-        hint.textContent = 'Left-click: paint | Right-drag: rotate | Scroll: brush size | Cmd/Ctrl+scroll: zoom';
+        hint.textContent = 'Left-click: paint/annotate | Right-drag: rotate | Scroll: brush size | Cmd/Ctrl+scroll: zoom';
         div.appendChild(hint);
 
         return div;
@@ -86,6 +92,47 @@ class SidebarDental {
             btn.classList.toggle('active', id === toolId);
         }
         this.plugin.setActiveTool(toolId);
+    }
+
+    // --- Color Mode ---
+
+    _buildColorModeToggle() {
+        const div = document.createElement('div');
+        div.className = 'dental-color-mode';
+
+        const btnRow = document.createElement('div');
+        btnRow.className = 'ann-btn-row';
+
+        const origBtn = document.createElement('button');
+        origBtn.className = 'dental-export-btn ann-confirm-btn active';
+        origBtn.textContent = 'Original Color';
+        origBtn.addEventListener('click', () => {
+            this._setColorMode('original');
+            origBtn.classList.add('active');
+            labelBtn.classList.remove('active');
+        });
+        btnRow.appendChild(origBtn);
+
+        const labelBtn = document.createElement('button');
+        labelBtn.className = 'dental-export-btn ann-confirm-btn';
+        labelBtn.textContent = 'Label Color';
+        labelBtn.addEventListener('click', () => {
+            this._setColorMode('label');
+            labelBtn.classList.add('active');
+            origBtn.classList.remove('active');
+        });
+        btnRow.appendChild(labelBtn);
+
+        div.appendChild(btnRow);
+        return div;
+    }
+
+    _setColorMode(mode) {
+        this.plugin.vlm.colorMode = mode;
+        // Re-sync colors for active mesh
+        if (this.plugin.activeMesh) {
+            this.plugin.vlm.syncColors(this.plugin.activeMesh, this.plugin.schema);
+        }
     }
 
     // --- Brush Settings ---
@@ -129,6 +176,305 @@ class SidebarDental {
         div.appendChild(fillCheck);
 
         return div;
+    }
+
+    // --- Text Annotation Settings ---
+
+    _buildTextSettings() {
+        const div = document.createElement('div');
+        div.className = 'dental-text-settings';
+
+        // Show/Hide toggle
+        const visRow = document.createElement('label');
+        visRow.className = 'dental-checkbox-label';
+        const visCb = document.createElement('input');
+        visCb.type = 'checkbox';
+        visCb.checked = true;
+        visCb.addEventListener('change', (e) => {
+            this.plugin.annManager.setVisible(e.target.checked);
+        });
+        // Color palette
+        const colorLabel = document.createElement('div');
+        colorLabel.className = 'dental-camera-label';
+        colorLabel.textContent = 'Annotation Color';
+        div.appendChild(colorLabel);
+
+        const colorGrid = document.createElement('div');
+        colorGrid.className = 'ann-color-grid';
+        this._colorButtons = {};
+        for (const color of ANNOTATION_COLORS) {
+            const btn = document.createElement('button');
+            btn.className = 'ann-color-btn';
+            btn.style.backgroundColor = color;
+            if (color === this.plugin.annManager.currentColor) btn.classList.add('active');
+            btn.addEventListener('click', () => {
+                const am = this.plugin.annManager;
+                am.currentColor = color;
+                Object.values(this._colorButtons).forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                // Update selected annotation if any
+                if (am.selectedId !== null) {
+                    am.updateColor(am.selectedId, color);
+                }
+            });
+            colorGrid.appendChild(btn);
+            this._colorButtons[color] = btn;
+        }
+        div.appendChild(colorGrid);
+
+        // Marker icon selector
+        const markerLabel = document.createElement('div');
+        markerLabel.className = 'dental-camera-label';
+        markerLabel.textContent = 'Marker Icon';
+        markerLabel.style.marginTop = '8px';
+        div.appendChild(markerLabel);
+
+        const markerGrid = document.createElement('div');
+        markerGrid.className = 'ann-marker-grid';
+        this._markerButtons = {};
+        for (const [key, iconDef] of Object.entries(MARKER_ICONS)) {
+            const btn = document.createElement('button');
+            btn.className = 'ann-marker-btn';
+            btn.title = key;
+            if (key === this.plugin.annManager.currentMarker) btn.classList.add('active');
+            btn.innerHTML = `<svg viewBox="${iconDef.vb}" width="18" height="18"><path d="${iconDef.path}" fill="currentColor"/></svg>`;
+            btn.addEventListener('click', () => {
+                const am = this.plugin.annManager;
+                am.currentMarker = key;
+                Object.values(this._markerButtons).forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                // Update selected annotation if any
+                if (am.selectedId !== null) {
+                    am.updateMarker(am.selectedId, key);
+                }
+            });
+            markerGrid.appendChild(btn);
+            this._markerButtons[key] = btn;
+        }
+        div.appendChild(markerGrid);
+
+        // Text input area
+        const inputLabel = document.createElement('div');
+        inputLabel.className = 'dental-camera-label';
+        inputLabel.textContent = 'Annotation Text';
+        inputLabel.style.marginTop = '8px';
+        div.appendChild(inputLabel);
+
+        this._annTextInput = document.createElement('input');
+        this._annTextInput.type = 'text';
+        this._annTextInput.className = 'ann-text-input';
+        this._annTextInput.placeholder = 'Click on model, then type here...';
+        div.appendChild(this._annTextInput);
+
+        const btnRow = document.createElement('div');
+        btnRow.className = 'ann-btn-row';
+
+        this._annAddBtn = document.createElement('button');
+        this._annAddBtn.className = 'dental-export-btn ann-confirm-btn';
+        this._annAddBtn.textContent = 'Add';
+        this._annAddBtn.addEventListener('click', () => this._confirmAnnotation());
+        btnRow.appendChild(this._annAddBtn);
+
+        this._annUpdateBtn = document.createElement('button');
+        this._annUpdateBtn.className = 'dental-export-btn ann-confirm-btn';
+        this._annUpdateBtn.textContent = 'Update';
+        this._annUpdateBtn.style.display = 'none';
+        this._annUpdateBtn.addEventListener('click', () => this._confirmEdit());
+        btnRow.appendChild(this._annUpdateBtn);
+
+        div.appendChild(btnRow);
+
+        // Enter key to confirm
+        this._annTextInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                if (this._editingAnnId !== null) {
+                    this._confirmEdit();
+                } else {
+                    this._confirmAnnotation();
+                }
+            }
+        });
+
+        // Selection status
+        this._annSelectionInfo = document.createElement('div');
+        this._annSelectionInfo.className = 'ann-selection-info';
+        this._annSelectionInfo.textContent = 'Click on model to place annotation';
+        div.appendChild(this._annSelectionInfo);
+
+        this._editingAnnId = null;
+
+        return div;
+    }
+
+    _confirmAnnotation() {
+        const text = this._annTextInput.value.trim();
+        if (!text) return;
+        this.plugin.textTool.confirmText(text);
+        this._annTextInput.value = '';
+        this._annSelectionInfo.textContent = 'Annotation added. Click model to place another.';
+        this._refreshAnnotationList();
+    }
+
+    _confirmEdit() {
+        const text = this._annTextInput.value.trim();
+        if (!text || this._editingAnnId === null) return;
+        const cmd = new EditAnnotationCommand(this.editor, this.plugin.annManager, this._editingAnnId, text);
+        cmd.execute();
+        this.editor.history.push(cmd);
+        this._exitEditMode();
+    }
+
+    _enterEditMode(annId, currentText) {
+        this._editingAnnId = annId;
+        this._annTextInput.value = currentText;
+        this._annTextInput.focus();
+        this._annTextInput.select();
+        this._annAddBtn.style.display = 'none';
+        this._annUpdateBtn.style.display = '';
+        this._annSelectionInfo.textContent = `Editing annotation — press Enter or click Update`;
+    }
+
+    _exitEditMode() {
+        this._editingAnnId = null;
+        this._annTextInput.value = '';
+        this._annAddBtn.style.display = '';
+        this._annUpdateBtn.style.display = 'none';
+        this._annSelectionInfo.textContent = 'Click on model to place annotation';
+    }
+
+
+    // --- Annotation List ---
+
+    _buildAnnotationList() {
+        const div = document.createElement('div');
+        div.className = 'dental-ann-list';
+
+        // Show All / Hide All buttons
+        const btnRow = document.createElement('div');
+        btnRow.className = 'ann-btn-row';
+
+        const showAllBtn = document.createElement('button');
+        showAllBtn.className = 'dental-export-btn ann-confirm-btn';
+        showAllBtn.textContent = 'Show All';
+        showAllBtn.addEventListener('click', () => {
+            this.plugin.annManager.setAllVisible(true);
+            this._refreshAnnotationList();
+        });
+        btnRow.appendChild(showAllBtn);
+
+        const hideAllBtn = document.createElement('button');
+        hideAllBtn.className = 'dental-export-btn ann-confirm-btn';
+        hideAllBtn.textContent = 'Hide All';
+        hideAllBtn.addEventListener('click', () => {
+            this.plugin.annManager.setAllVisible(false);
+            this._refreshAnnotationList();
+        });
+        btnRow.appendChild(hideAllBtn);
+
+        const deleteAllBtn = document.createElement('button');
+        deleteAllBtn.className = 'dental-export-btn ann-confirm-btn ann-delete-all';
+        deleteAllBtn.textContent = 'Delete All';
+        deleteAllBtn.addEventListener('click', () => {
+            const am = this.plugin.annManager;
+            const ids = am.getAll().map(a => a.id);
+            if (ids.length === 0) return;
+            for (const id of ids) {
+                this.editor.signals.annotationRemoveRequested.dispatch(id);
+            }
+        });
+        btnRow.appendChild(deleteAllBtn);
+
+        div.appendChild(btnRow);
+
+        // Scrollable list container
+        this._annListContainer = document.createElement('div');
+        this._annListContainer.className = 'ann-list-scroll';
+        div.appendChild(this._annListContainer);
+
+        return div;
+    }
+
+    _refreshAnnotationList() {
+        const container = this._annListContainer;
+        if (!container) return;
+        container.innerHTML = '';
+
+        const am = this.plugin.annManager;
+        const annotations = am.getAll();
+
+        if (annotations.length === 0) {
+            const empty = document.createElement('div');
+            empty.className = 'ann-list-empty';
+            empty.textContent = 'No annotations yet';
+            container.appendChild(empty);
+            return;
+        }
+
+        for (const ann of annotations) {
+            const item = document.createElement('div');
+            item.className = 'ann-list-item';
+            if (am.selectedId === ann.id) item.classList.add('selected');
+            if (ann.hidden) item.classList.add('hidden');
+
+            const dot = document.createElement('span');
+            dot.className = 'ann-list-dot';
+            dot.style.backgroundColor = ann.color;
+            item.appendChild(dot);
+
+            const text = document.createElement('span');
+            text.className = 'ann-list-text';
+            text.textContent = ann.text;
+            item.appendChild(text);
+
+            const toggleBtn = document.createElement('button');
+            toggleBtn.className = 'ann-list-btn';
+            toggleBtn.title = ann.hidden ? 'Show' : 'Hide';
+            toggleBtn.textContent = ann.hidden ? '◻' : '◼';
+            toggleBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                am.setAnnotationVisible(ann.id, !!ann.hidden);
+                this._refreshAnnotationList();
+            });
+            item.appendChild(toggleBtn);
+
+            const deleteBtn = document.createElement('button');
+            deleteBtn.className = 'ann-list-btn ann-list-del';
+            deleteBtn.title = 'Delete';
+            deleteBtn.textContent = '×';
+            deleteBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.editor.signals.annotationRemoveRequested.dispatch(ann.id);
+                this._refreshAnnotationList();
+            });
+            item.appendChild(deleteBtn);
+
+            // Click row to select
+            item.addEventListener('click', () => {
+                am.select(ann.id);
+                this._refreshAnnotationList();
+            });
+
+            container.appendChild(item);
+        }
+    }
+
+    _updateAnnotationSelection(annId) {
+        const am = this.plugin.annManager;
+        if (annId === null) {
+            this._annSelectionInfo.textContent = 'Click an annotation to select and edit';
+            return;
+        }
+        const ann = am.get(annId);
+        if (!ann) return;
+        this._annSelectionInfo.textContent = `Selected: "${ann.text}"`;
+        // Sync sidebar color/marker buttons to match selected annotation
+        Object.values(this._colorButtons).forEach(b => b.classList.remove('active'));
+        if (this._colorButtons[ann.color]) this._colorButtons[ann.color].classList.add('active');
+        am.currentColor = ann.color;
+
+        Object.values(this._markerButtons).forEach(b => b.classList.remove('active'));
+        if (this._markerButtons[ann.marker]) this._markerButtons[ann.marker].classList.add('active');
+        am.currentMarker = ann.marker;
     }
 
     // --- Current Label Display ---
@@ -522,7 +868,7 @@ class SidebarDental {
     _exportPLY() {
         const mesh = this.plugin.activeMesh;
         if (!mesh) { alert('No mesh selected'); return; }
-        const exporter = new DentalExporter(this.plugin.vlm, this.plugin.schema);
+        const exporter = new DentalExporter(this.plugin.vlm, this.plugin.schema, this.plugin.annManager);
         const blob = exporter.exportPLYBinary(mesh);
         const name = (mesh.name || 'mesh') + '_labeled.ply';
         DentalExporter.download(blob, name);
@@ -531,7 +877,7 @@ class SidebarDental {
     _exportJSON() {
         const mesh = this.plugin.activeMesh;
         if (!mesh) { alert('No mesh selected'); return; }
-        const exporter = new DentalExporter(this.plugin.vlm, this.plugin.schema);
+        const exporter = new DentalExporter(this.plugin.vlm, this.plugin.schema, this.plugin.annManager);
         const blob = exporter.exportJSON(mesh);
         const name = (mesh.name || 'mesh') + '_labels.json';
         DentalExporter.download(blob, name);
@@ -556,6 +902,32 @@ class SidebarDental {
             this.editor.signals.labelChanged.add(() => {
                 this._updateCurrentLabelDisplay();
                 this._updateLabelListSelection();
+            });
+        }
+
+        if (this.editor.signals.annotationSelected) {
+            this.editor.signals.annotationSelected.add((annId) => {
+                this._updateAnnotationSelection(annId);
+                this._refreshAnnotationList();
+            });
+        }
+
+        if (this.editor.signals.annotationChanged) {
+            this.editor.signals.annotationChanged.add(() => {
+                this._refreshAnnotationList();
+            });
+        }
+
+        if (this.editor.signals.textHitPending) {
+            this.editor.signals.textHitPending.add(() => {
+                this._annTextInput.focus();
+                this._annSelectionInfo.textContent = 'Point placed — type text and press Enter or click Add';
+            });
+        }
+
+        if (this.editor.signals.textEditPending) {
+            this.editor.signals.textEditPending.add((annId, currentText) => {
+                this._enterEditMode(annId, currentText);
             });
         }
     }

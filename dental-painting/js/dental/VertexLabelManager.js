@@ -15,6 +15,10 @@ class VertexLabelManager {
         this._spatialIndices = new Map();
         // meshUuid → adjacency list (array of arrays)
         this._adjacency = new Map();
+        // meshUuid → Float32Array of original vertex colors from file
+        this._originalColors = new Map();
+        // Color mode: 'original' = show PLY colors, 'label' = show label colors
+        this.colorMode = 'original';
     }
 
     /**
@@ -31,14 +35,17 @@ class VertexLabelManager {
         // Initialize labels to 0 (unlabeled)
         this._labels.set(uuid, new Int32Array(count));
 
-        // Ensure vertex color attribute exists
-        if (!geometry.attributes.color) {
-            const colors = new Float32Array(count * 3);
-            // Default gray (0.5, 0.5, 0.5)
+        // Save original vertex colors from PLY/mesh before overwriting
+        if (geometry.attributes.color) {
+            this._originalColors.set(uuid, new Float32Array(geometry.attributes.color.array));
+        } else {
+            // No original colors — create default gray
+            const defaultColors = new Float32Array(count * 3);
             for (let i = 0; i < count * 3; i++) {
-                colors[i] = 0.5;
+                defaultColors[i] = 0.5;
             }
-            geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+            this._originalColors.set(uuid, defaultColors);
+            geometry.setAttribute('color', new THREE.BufferAttribute(new Float32Array(defaultColors), 3));
         }
 
         // Set material to use vertex colors
@@ -146,11 +153,28 @@ class VertexLabelManager {
         }
 
         const colors = colorAttr.array;
+        const origColors = this._originalColors.get(mesh.uuid);
+
         for (let i = 0; i < labels.length; i++) {
-            const [r, g, b] = schema.getColorFloat(labels[i]);
-            colors[i * 3] = r;
-            colors[i * 3 + 1] = g;
-            colors[i * 3 + 2] = b;
+            if (this.colorMode === 'original') {
+                // Show original colors; only override labeled vertices
+                if (labels[i] !== 0) {
+                    const [r, g, b] = schema.getColorFloat(labels[i]);
+                    colors[i * 3] = r;
+                    colors[i * 3 + 1] = g;
+                    colors[i * 3 + 2] = b;
+                } else if (origColors) {
+                    colors[i * 3] = origColors[i * 3];
+                    colors[i * 3 + 1] = origColors[i * 3 + 1];
+                    colors[i * 3 + 2] = origColors[i * 3 + 2];
+                }
+            } else {
+                // Label mode: all vertices show label color
+                const [r, g, b] = schema.getColorFloat(labels[i]);
+                colors[i * 3] = r;
+                colors[i * 3 + 1] = g;
+                colors[i * 3 + 2] = b;
+            }
         }
         colorAttr.needsUpdate = true;
 
